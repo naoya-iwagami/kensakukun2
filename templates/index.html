@@ -1,0 +1,272 @@
+<!DOCTYPE html>  
+<html lang="ja">  
+<head>  
+  <meta charset="UTF-8">  
+  <title>ベクトル検索モデル3種比較アプリ</title>  
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">  
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">  
+  <style>  
+    html, body {  
+      height: 100%;  
+      margin: 0; padding: 0;  
+    }  
+    body {  
+      min-height: 100vh;  
+      width: 100vw;  
+      overflow-x: hidden;  
+    }  
+    .container-fluid {  
+      padding-left: 0 !important;  
+      padding-right: 0 !important;  
+      margin: 0 !important;  
+      max-width: 100vw !important;  
+      width: 100vw !important;  
+    }  
+    .search-columns {  
+      margin-left: 0 !important;  
+      margin-right: 0 !important;  
+    }  
+    .search-columns .col-md-4 {  
+      min-height: 100vh;  
+      border-right: 1px solid #eee;  
+      padding-top: 10px;  
+      padding-bottom: 30px;  
+      background-color: #fff;  
+      display: flex;  
+      flex-direction: column;  
+    }  
+    .search-columns .col-md-4:last-child {  
+      border-right: none;  
+    }  
+    .assistant-answer {  
+      min-height: 80px;  
+      margin-bottom: 1em;  
+    }  
+    .result-list {  
+      flex-grow: 1;  
+      overflow-y: auto;  
+      padding-left: 0;  
+    }  
+    @media (max-width: 991.98px) {  
+      .search-columns .col-md-4 {  
+        min-height: auto;  
+        border-right: none;  
+        border-bottom: 1px solid #eee;  
+      }  
+      .search-columns .col-md-4:last-child {  
+        border-bottom: none;  
+      }  
+    }  
+  </style>  
+</head>  
+<body class="m-0 p-0">  
+  <div class="container-fluid m-0 p-0">  
+    <form id="searchForm" class="mb-4 px-3 mt-3">  
+      <div class="input-group">  
+        <input type="text" id="searchInput" class="form-control" placeholder="検索キーワードを入力..." autocomplete="off">  
+        <div class="input-group-append">  
+          <button class="btn btn-success" type="submit">検索</button>  
+        </div>  
+      </div>  
+    </form>  
+    <div class="row search-columns no-gutters">  
+      <!-- 現small -->  
+      <div class="col-md-4 result-col px-3">  
+        <div class="result-title vector font-weight-bold my-2">  
+          現small（filetest11）  
+        </div>  
+        <div class="rate-area mb-2">  
+          <label>評価:  
+            <select class="rating-select" data-col="current_small">  
+              <option value="">--</option>  
+              <option value="1">1点</option>  
+              <option value="2">2点</option>  
+              <option value="3">3点</option>  
+              <option value="4">4点</option>  
+              <option value="5">5点</option>  
+            </select>  
+          </label>  
+        </div>  
+        <div class="assistant-answer" id="currentSmallAnswer"></div>  
+        <ul class="result-list list-unstyled" id="currentSmallResult"></ul>  
+      </div>  
+      <!-- 新small -->  
+      <div class="col-md-4 result-col px-3">  
+        <div class="result-title vector font-weight-bold my-2">  
+          新small（filetest11-small）  
+        </div>  
+        <div class="rate-area mb-2">  
+          <label>評価:  
+            <select class="rating-select" data-col="new_small">  
+              <option value="">--</option>  
+              <option value="1">1点</option>  
+              <option value="2">2点</option>  
+              <option value="3">3点</option>  
+              <option value="4">4点</option>  
+              <option value="5">5点</option>  
+            </select>  
+          </label>  
+        </div>  
+        <div class="assistant-answer" id="newSmallAnswer"></div>  
+        <ul class="result-list list-unstyled" id="newSmallResult"></ul>  
+      </div>  
+      <!-- large -->  
+      <div class="col-md-4 result-col px-3">  
+        <div class="result-title vector font-weight-bold my-2">  
+          large（filetest11-large）  
+        </div>  
+        <div class="rate-area mb-2">  
+          <label>評価:  
+            <select class="rating-select" data-col="large">  
+              <option value="">--</option>  
+              <option value="1">1点</option>  
+              <option value="2">2点</option>  
+              <option value="3">3点</option>  
+              <option value="4">4点</option>  
+              <option value="5">5点</option>  
+            </select>  
+          </label>  
+        </div>  
+        <div class="assistant-answer" id="largeAnswer"></div>  
+        <ul class="result-list list-unstyled" id="largeResult"></ul>  
+      </div>  
+    </div>  
+  </div>  
+  <div id="docModalContainer"></div>  
+  <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>  
+  <script>  
+  // 各評価・回答内容の一時保存＆管理用  
+  let ratings = {  
+    current_small: { score: null, answer: null },  
+    new_small: { score: null, answer: null },  
+    large: { score: null, answer: null }  
+  };  
+  let last_user_prompt = "";  
+  
+  // 各アシスタント回答内容キャッシュ  
+  function updateAnswersCache() {  
+    ratings.current_small.answer = $("#currentSmallAnswer").html() || "";  
+    ratings.new_small.answer = $("#newSmallAnswer").html() || "";  
+    ratings.large.answer = $("#largeAnswer").html() || "";  
+    last_user_prompt = $("#searchInput").val();  
+  }  
+  function escapeHtml(str){  
+    if (!str) return '';  
+    return str.replace(/[&<>"']/g, function(m){  
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m];  
+    });  
+  }  
+  function showResults(arr, el) {  
+    el.innerHTML = "";  
+    (arr||[]).forEach(function(file){  
+      let li = document.createElement("li");  
+      li.innerHTML = `<span>${escapeHtml(file.title)}</span>  
+        <a href="#" class="viewlink" data-title="${escapeHtml(file.title)}" data-content="${encodeURIComponent(file.content)}">プレビュー</a>  
+        ${(file.url?`<a href="${file.url}" class="dl-link" target="_blank">ダウンロード</a>`:"")}  
+        `;  
+      el.appendChild(li);  
+    });  
+  }  
+  function showPreview(title, content) {  
+    let overlay = document.createElement("div");  
+    overlay.className = "modal-overlay";  
+    let modal = document.createElement("div");  
+    modal.className = "modal-box";  
+    modal.innerHTML = `<h5>${escapeHtml(title)}</h5><pre style="white-space:pre-wrap">${escapeHtml(content)}</pre>  
+      <button class="btn btn-secondary" id="closeM">閉じる</button>`;  
+    overlay.appendChild(modal);  
+    document.body.appendChild(overlay);  
+    document.getElementById('closeM').onclick = function(){document.body.removeChild(overlay);}  
+  }  
+  function adjustAssistantHeights() {  
+    var max = 0;  
+    $(".assistant-answer").each(function(){  
+      $(this).css('height', 'auto');  
+      if(this.offsetHeight > max) max = this.offsetHeight;  
+    });  
+    $(".assistant-answer").each(function(){  
+      $(this).css('height', max + "px");  
+    });  
+  }  
+  $(function(){  
+    $("#searchForm").on("submit", function(e){  
+      e.preventDefault();  
+      let prompt = $("#searchInput").val().trim();  
+      if(!prompt) return;  
+      $("#currentSmallResult").html("<li>検索中...</li>");  
+      $("#newSmallResult").html("<li>検索中...</li>");  
+      $("#largeResult").html("<li>検索中...</li>");  
+      $(".assistant-answer").html("");  
+      // 評価初期化  
+      ratings = {  
+        current_small: { score: null, answer: null },  
+        new_small: { score: null, answer: null },  
+        large: { score: null, answer: null }  
+      };  
+      $(".rating-select").val('');  
+      fetch('/send_message',{  
+        method:'POST',  
+        headers:{'Content-Type':'application/json'},  
+        body:JSON.stringify({prompt:prompt})  
+      }).then(r=>r.json()).then(data=>{  
+        $("#currentSmallAnswer").html(data.current_small_answer||"");  
+        $("#newSmallAnswer").html(data.new_small_answer||"");  
+        $("#largeAnswer").html(data.large_answer||"");  
+        showResults(data.current_small_files, document.getElementById('currentSmallResult'));  
+        showResults(data.new_small_files, document.getElementById('newSmallResult'));  
+        showResults(data.large_files, document.getElementById('largeResult'));  
+        adjustAssistantHeights();  
+        updateAnswersCache(); // 回答キャッシュ保持  
+      }).catch(()=>{  
+        $("#currentSmallResult, #newSmallResult, #largeResult").html("<li>エラー</li>");  
+        $(".assistant-answer").html("");  
+        adjustAssistantHeights();  
+      });  
+    });  
+    // プレビュー機能  
+    $(document).on('click', '.viewlink', function(e){  
+      e.preventDefault();  
+      let title = $(this).data('title');  
+      let content = decodeURIComponent($(this).data('content')||"");  
+      showPreview(title, content);  
+    });  
+    $(window).on('resize', adjustAssistantHeights);  
+  
+    // 評価欄change時  
+    $(".rating-select").on("change", function(){  
+      const col = $(this).data("col");  
+      const score = $(this).val();  
+      updateAnswersCache();  
+      ratings[col].score = score ? Number(score) : null;  
+      // 3カラム全ての評価（1〜5）が揃ったら1度だけ送信  
+      if(ratings.current_small.score && ratings.new_small.score && ratings.large.score){  
+        fetch("/save_rating", {  
+          method: "POST",  
+          headers: {"Content-Type":"application/json"},  
+          body: JSON.stringify({  
+            user_prompt: last_user_prompt,  
+            ratings: {  
+              current_small: ratings.current_small.score,  
+              new_small: ratings.new_small.score,  
+              large: ratings.large.score  
+            },  
+            assistant_answers: {  
+              current_small: ratings.current_small.answer,  
+              new_small: ratings.new_small.answer,  
+              large: ratings.large.answer  
+            }  
+          })  
+        }).then(()=>{  
+          // 保存後リセット（未評価状態に戻す/再送防止）  
+          ratings.current_small.score = null;  
+          ratings.new_small.score = null;  
+          ratings.large.score = null;  
+          $(".rating-select").val('');  
+          alert("3つの評価を記録しました。");  
+        });  
+      }  
+    });  
+  });  
+  </script>  
+</body>  
+</html>  

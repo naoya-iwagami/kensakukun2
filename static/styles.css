@@ -1,0 +1,117 @@
+body, html {  
+  height: 100%;  
+  width: 100%;  
+  margin: 0;  
+  padding: 0;  
+  background: #f8f9fa;  
+}  
+  
+.result-col {  
+  border: 1.5px solid #e4e8ee;  
+  margin-bottom: .8rem;  
+  background: #fff;  
+  min-height: 72vh;  
+  border-radius: 0.8rem;  
+  padding: 1.1rem 0.4rem 1.1rem 0.9rem;  
+  box-shadow: 0 2px 9px rgba(0,0,0,0.07);  
+  overflow-x: auto;  
+}  
+  
+.result-title {  
+  font-weight: bold;  
+  font-size: 1.07em;  
+  margin-bottom: .7em;  
+  letter-spacing: 0.02em;  
+  text-align: left;  
+}  
+.result-title.vector  { color: #be753e; }  
+  
+.assistant-answer {  
+  border: 1.5px solid #eee;  
+  border-radius: 0.45rem;  
+  padding: 0.65em 0.8em 0.6em 0.8em;  
+  background: #fdfdfc;  
+  margin-bottom: 1.2em;  
+  min-height: 4em;  
+  font-size: 1.03em;  
+  font-family: inherit;  
+  color: #252525;  
+  word-break: break-word;  
+  white-space: pre-line;  
+}  
+  
+.result-list {  
+  margin-top: 0;  
+  padding-left: 1.1em;  
+}  
+  
+.result-list li {  
+  margin-bottom: 0.7em;  
+  word-break: break-all;  
+  font-size: 1em;  
+}  
+  
+.dl-link {  
+  margin-left: 8px;  
+  color: #2176ae !important;  
+  text-decoration: underline;  
+}  
+  
+.result-list li a.viewlink {  
+  margin-left: 7px;  
+  color: #264654 !important;  
+  text-decoration: underline dotted;  
+}  
+  
+.result-list li span {  
+  display: inline-block;  
+  min-width: 5em;  
+}  
+  
+.modal-overlay {  
+  position: fixed;  
+  top:0; left:0; right:0; bottom:0;  
+  background: rgba(0,0,0,0.22);  
+  z-index: 1000;  
+  display: flex;  
+  align-items: center;  
+  justify-content: center;  
+}  
+  
+.modal-box {  
+  background:#fff;  
+  border-radius:8px;  
+  box-shadow:0 6px 40px rgba(0,0,0,0.15);  
+  padding:1.5em 2em 1em 2em;  
+  max-width:70vw;  
+  max-height:65vh;  
+  overflow-y:auto;  
+}  
+  
+@media (max-width: 991px) {  
+  .result-col {  
+    min-height:unset;  
+    margin-bottom:1.3em;  
+    margin-top:0.8em;  
+  }  
+  .result-title {  
+    font-size: 1.01em;  
+    margin-bottom:.5em;  
+  }  
+  .col-md-4 { /* スマホ・タブレットで縦並び3つ */  
+    max-width: 100%;  
+    flex: 0 0 100%;  
+  }  
+}  
+  
+/* 入力フォーム */  
+.input-group .form-control {  
+  font-size: 1.1em;  
+  background: #fcfcfc;  
+}  
+  
+.input-group-append .btn-success {  
+  font-size: 1.1em;  
+  font-weight: bold;  
+  min-width:80px;  
+}  

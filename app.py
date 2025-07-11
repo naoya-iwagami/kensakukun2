@@ -234,7 +234,6 @@ def send_message():
             'new_small_files': prepare_files(results_vs['new_small']),  
             'large_files': prepare_files(results_vs['large'])  
         }  
-        # (ユーザーID取得は後続APIで利用するためメモ)  
         _ = get_authenticated_user()  
         return json.dumps(resp, ensure_ascii=False), 200, {'Content-Type': 'application/json'}  
     except Exception as e:  
@@ -271,6 +270,7 @@ def save_rating():
     try:  
         data = request.get_json()  
         user_id = get_authenticated_user()  
+        user_name = session.get("user_name", "anonymous")  # ★追加  
         user_prompt = data.get("user_prompt", "")  
         ratings = data.get("ratings", {})       # dict: column名→score  
         assistant_answers = data.get("assistant_answers", {}) # dict: column名→content  
@@ -283,6 +283,7 @@ def save_rating():
         item = {  
             "id": str(uuid.uuid4()),  
             "user_id": user_id,  
+            "user_name": user_name,  # ★追加  
             "user_prompt": user_prompt,  
             "ratings": ratings,  
             "assistant_answers": assistant_answers,  

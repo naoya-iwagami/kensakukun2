@@ -69,6 +69,14 @@
         </div>  
       </div>  
     </form>  
+  
+    <!-- スピナーここに追記 -->  
+    <div id="searchSpinner" style="display:none;text-align:center;margin:2em 0;">  
+      <div class="spinner-border text-success" style="width:3rem;height:3rem;" role="status">  
+        <span class="sr-only">検索中...</span>  
+      </div>  
+    </div>  
+  
     <div class="row search-columns no-gutters">  
       <!-- 現small -->  
       <div class="col-md-4 result-col px-3">  
@@ -135,138 +143,159 @@
   <div id="docModalContainer"></div>  
   <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>  
   <script>  
-  // 各評価・回答内容の一時保存＆管理用  
-  let ratings = {  
-    current_small: { score: null, answer: null },  
-    new_small: { score: null, answer: null },  
-    large: { score: null, answer: null }  
-  };  
-  let last_user_prompt = "";  
+    // 各評価・回答内容の一時保存＆管理用  
+    let ratings = {  
+      current_small: { score: null, answer: null },  
+      new_small: { score: null, answer: null },  
+      large: { score: null, answer: null }  
+    };  
+    let last_user_prompt = "";  
   
-  // 各アシスタント回答内容キャッシュ  
-  function updateAnswersCache() {  
-    ratings.current_small.answer = $("#currentSmallAnswer").html() || "";  
-    ratings.new_small.answer = $("#newSmallAnswer").html() || "";  
-    ratings.large.answer = $("#largeAnswer").html() || "";  
-    last_user_prompt = $("#searchInput").val();  
-  }  
-  function escapeHtml(str){  
-    if (!str) return '';  
-    return str.replace(/[&<>"']/g, function(m){  
-      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m];  
-    });  
-  }  
-  function showResults(arr, el) {  
-    el.innerHTML = "";  
-    (arr||[]).forEach(function(file){  
-      let li = document.createElement("li");  
-      li.innerHTML = `<span>${escapeHtml(file.title)}</span>  
-        <a href="#" class="viewlink" data-title="${escapeHtml(file.title)}" data-content="${encodeURIComponent(file.content)}">プレビュー</a>  
-        ${(file.url?`<a href="${file.url}" class="dl-link" target="_blank">ダウンロード</a>`:"")}  
-        `;  
-      el.appendChild(li);  
-    });  
-  }  
-  function showPreview(title, content) {  
-    let overlay = document.createElement("div");  
-    overlay.className = "modal-overlay";  
-    let modal = document.createElement("div");  
-    modal.className = "modal-box";  
-    modal.innerHTML = `<h5>${escapeHtml(title)}</h5><pre style="white-space:pre-wrap">${escapeHtml(content)}</pre>  
-      <button class="btn btn-secondary" id="closeM">閉じる</button>`;  
-    overlay.appendChild(modal);  
-    document.body.appendChild(overlay);  
-    document.getElementById('closeM').onclick = function(){document.body.removeChild(overlay);}  
-  }  
-  function adjustAssistantHeights() {  
-    var max = 0;  
-    $(".assistant-answer").each(function(){  
-      $(this).css('height', 'auto');  
-      if(this.offsetHeight > max) max = this.offsetHeight;  
-    });  
-    $(".assistant-answer").each(function(){  
-      $(this).css('height', max + "px");  
-    });  
-  }  
-  $(function(){  
-    $("#searchForm").on("submit", function(e){  
-      e.preventDefault();  
-      let prompt = $("#searchInput").val().trim();  
-      if(!prompt) return;  
-      $("#currentSmallResult").html("<li>検索中...</li>");  
-      $("#newSmallResult").html("<li>検索中...</li>");  
-      $("#largeResult").html("<li>検索中...</li>");  
-      $(".assistant-answer").html("");  
-      // 評価初期化  
-      ratings = {  
-        current_small: { score: null, answer: null },  
-        new_small: { score: null, answer: null },  
-        large: { score: null, answer: null }  
-      };  
-      $(".rating-select").val('');  
-      fetch('/send_message',{  
-        method:'POST',  
-        headers:{'Content-Type':'application/json'},  
-        body:JSON.stringify({prompt:prompt})  
-      }).then(r=>r.json()).then(data=>{  
-        $("#currentSmallAnswer").html(data.current_small_answer||"");  
-        $("#newSmallAnswer").html(data.new_small_answer||"");  
-        $("#largeAnswer").html(data.large_answer||"");  
-        showResults(data.current_small_files, document.getElementById('currentSmallResult'));  
-        showResults(data.new_small_files, document.getElementById('newSmallResult'));  
-        showResults(data.large_files, document.getElementById('largeResult'));  
-        adjustAssistantHeights();  
-        updateAnswersCache(); // 回答キャッシュ保持  
-      }).catch(()=>{  
-        $("#currentSmallResult, #newSmallResult, #largeResult").html("<li>エラー</li>");  
+    // 各アシスタント回答内容キャッシュ  
+    function updateAnswersCache() {  
+      ratings.current_small.answer = $("#currentSmallAnswer").html() || "";  
+      ratings.new_small.answer = $("#newSmallAnswer").html() || "";  
+      ratings.large.answer = $("#largeAnswer").html() || "";  
+      last_user_prompt = $("#searchInput").val();  
+    }  
+    function escapeHtml(str){  
+      if (!str) return '';  
+      return str.replace(/[&<>"']/g, function(m){  
+        return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m];  
+      });  
+    }  
+    function showResults(arr, el) {  
+      el.innerHTML = "";  
+      (arr||[]).forEach(function(file){  
+        let li = document.createElement("li");  
+        li.innerHTML = `<span>${escapeHtml(file.title)}</span>  
+          <a href="#" class="viewlink" data-title="${escapeHtml(file.title)}" data-content="${encodeURIComponent(file.content)}">プレビュー</a>  
+          ${(file.url?`<a href="${file.url}" class="dl-link" target="_blank">ダウンロード</a>`:"")}  
+          `;  
+        el.appendChild(li);  
+      });  
+    }  
+    function showPreview(title, content) {  
+      let overlay = document.createElement("div");  
+      overlay.className = "modal-overlay";  
+      let modal = document.createElement("div");  
+      modal.className = "modal-box";  
+      modal.innerHTML = `<h5>${escapeHtml(title)}</h5><pre style="white-space:pre-wrap">${escapeHtml(content)}</pre>  
+        <button class="btn btn-secondary" id="closeM">閉じる</button>`;  
+      overlay.appendChild(modal);  
+      document.body.appendChild(overlay);  
+      document.getElementById('closeM').onclick = function(){document.body.removeChild(overlay);}  
+    }  
+    function adjustAssistantHeights() {  
+      var max = 0;  
+      $(".assistant-answer").each(function(){  
+        $(this).css('height', 'auto');  
+        if(this.offsetHeight > max) max = this.offsetHeight;  
+      });  
+      $(".assistant-answer").each(function(){  
+        $(this).css('height', max + "px");  
+      });  
+    }  
+    $(function(){  
+  
+      // Enterキーで送信  
+      $("#searchInput").on("keydown", function(e){  
+        if (e.key === "Enter" && !e.shiftKey) {  
+          e.preventDefault();  
+          $("#searchForm").submit();  
+        }  
+      });  
+  
+      $("#searchForm").on("submit", function(e){  
+        e.preventDefault();  
+        let prompt = $("#searchInput").val().trim();  
+        if(!prompt) return;  
+  
+        // スピナー表示  
+        $("#searchSpinner").show();  
+  
+        $("#currentSmallResult").html("<li>検索中...</li>");  
+        $("#newSmallResult").html("<li>検索中...</li>");  
+        $("#largeResult").html("<li>検索中...</li>");  
         $(".assistant-answer").html("");  
-        adjustAssistantHeights();  
+        // 評価初期化  
+        ratings = {  
+          current_small: { score: null, answer: null },  
+          new_small: { score: null, answer: null },  
+          large: { score: null, answer: null }  
+        };  
+        $(".rating-select").val('');  
+        fetch('/send_message',{  
+          method:'POST',  
+          headers:{'Content-Type':'application/json'},  
+          body:JSON.stringify({prompt:prompt})  
+        }).then(r=>r.json()).then(data=>{  
+          $("#currentSmallAnswer").html(data.current_small_answer||"");  
+          $("#newSmallAnswer").html(data.new_small_answer||"");  
+          $("#largeAnswer").html(data.large_answer||"");  
+          showResults(data.current_small_files, document.getElementById('currentSmallResult'));  
+          showResults(data.new_small_files, document.getElementById('newSmallResult'));  
+          showResults(data.large_files, document.getElementById('largeResult'));  
+          adjustAssistantHeights();  
+          updateAnswersCache(); // 回答キャッシュ保持  
+  
+          // スピナー消す  
+          $("#searchSpinner").hide();  
+        }).catch(()=>{  
+          $("#currentSmallResult, #newSmallResult, #largeResult").html("<li>エラー</li>");  
+          $(".assistant-answer").html("");  
+          adjustAssistantHeights();  
+  
+          // スピナー消す  
+          $("#searchSpinner").hide();  
+        });  
+      });  
+  
+      // プレビュー機能  
+      $(document).on('click', '.viewlink', function(e){  
+        e.preventDefault();  
+        let title = $(this).data('title');  
+        let content = decodeURIComponent($(this).data('content')||"");  
+        showPreview(title, content);  
+      });  
+  
+      $(window).on('resize', adjustAssistantHeights);  
+  
+      // 評価欄change時  
+      $(".rating-select").on("change", function(){  
+        const col = $(this).data("col");  
+        const score = $(this).val();  
+        updateAnswersCache();  
+        ratings[col].score = score ? Number(score) : null;  
+        // 3カラム全ての評価（1〜5）が揃ったら1度だけ送信  
+        if(ratings.current_small.score && ratings.new_small.score && ratings.large.score){  
+          fetch("/save_rating", {  
+            method: "POST",  
+            headers: {"Content-Type":"application/json"},  
+            body: JSON.stringify({  
+              user_prompt: last_user_prompt,  
+              ratings: {  
+                current_small: ratings.current_small.score,  
+                new_small: ratings.new_small.score,  
+                large: ratings.large.score  
+              },  
+              assistant_answers: {  
+                current_small: ratings.current_small.answer,  
+                new_small: ratings.new_small.answer,  
+                large: ratings.large.answer  
+              }  
+            })  
+          }).then(()=>{  
+            // 保存後リセット（未評価状態に戻す/再送防止）  
+            ratings.current_small.score = null;  
+            ratings.new_small.score = null;  
+            ratings.large.score = null;  
+            $(".rating-select").val('');  
+            alert("3つの評価を記録しました。");  
+          });  
+        }  
       });  
     });  
-    // プレビュー機能  
-    $(document).on('click', '.viewlink', function(e){  
-      e.preventDefault();  
-      let title = $(this).data('title');  
-      let content = decodeURIComponent($(this).data('content')||"");  
-      showPreview(title, content);  
-    });  
-    $(window).on('resize', adjustAssistantHeights);  
-  
-    // 評価欄change時  
-    $(".rating-select").on("change", function(){  
-      const col = $(this).data("col");  
-      const score = $(this).val();  
-      updateAnswersCache();  
-      ratings[col].score = score ? Number(score) : null;  
-      // 3カラム全ての評価（1〜5）が揃ったら1度だけ送信  
-      if(ratings.current_small.score && ratings.new_small.score && ratings.large.score){  
-        fetch("/save_rating", {  
-          method: "POST",  
-          headers: {"Content-Type":"application/json"},  
-          body: JSON.stringify({  
-            user_prompt: last_user_prompt,  
-            ratings: {  
-              current_small: ratings.current_small.score,  
-              new_small: ratings.new_small.score,  
-              large: ratings.large.score  
-            },  
-            assistant_answers: {  
-              current_small: ratings.current_small.answer,  
-              new_small: ratings.new_small.answer,  
-              large: ratings.large.answer  
-            }  
-          })  
-        }).then(()=>{  
-          // 保存後リセット（未評価状態に戻す/再送防止）  
-          ratings.current_small.score = null;  
-          ratings.new_small.score = null;  
-          ratings.large.score = null;  
-          $(".rating-select").val('');  
-          alert("3つの評価を記録しました。");  
-        });  
-      }  
-    });  
-  });  
   </script>  
 </body>  
 </html>  

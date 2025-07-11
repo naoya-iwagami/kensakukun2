@@ -20,7 +20,10 @@ from markdown2 import markdown
 import io  
 from urllib.parse import quote, unquote  
 from concurrent.futures import ThreadPoolExecutor  
-  
+
+os.environ['HTTP_PROXY'] = 'http://g3.konicaminolta.jp:8080'
+os.environ['HTTPS_PROXY'] = 'http://g3.konicaminolta.jp:8080'
+
 # Flask/Session初期化  
 app = Flask(__name__)  
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'your-default-secret-key')  

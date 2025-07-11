@@ -4,6 +4,7 @@ import threading
 import datetime  
 import uuid  
 import traceback  
+import base64  
   
 from flask import Flask, request, render_template, session, send_file  
 from flask_session import Session  
@@ -20,7 +21,7 @@ from markdown2 import markdown
 import io  
 from urllib.parse import quote, unquote  
 from concurrent.futures import ThreadPoolExecutor  
-
+  
 # Flask/Session初期化  
 app = Flask(__name__)  
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'your-default-secret-key')  
@@ -84,9 +85,32 @@ def generate_sas_url(blob_client, blob_name):
     return url  
   
 def get_authenticated_user():  
-    # セッションから取得する例（匿名はanonymous）  
-    if "user_id" not in session:  
-        session["user_id"] = "anonymous"  
+    # --- Easy Auth (EntraID)方式でIDを取る ---  
+    # セッションから取得（キャッシュ済ならそれを使う）  
+    if "user_id" in session and "user_name" in session:  
+        return session["user_id"]  
+    client_principal = request.headers.get("X-MS-CLIENT-PRINCIPAL")  
+    if client_principal:  
+        try:  
+            decoded = base64.b64decode(client_principal).decode("utf-8")  
+            user_data = json.loads(decoded)  
+            user_id = None  
+            user_name = None  
+            if "claims" in user_data:  
+                for claim in user_data["claims"]:  
+                    if claim.get("typ") == "http://schemas.microsoft.com/identity/claims/objectidentifier":  
+                        user_id = claim.get("val")  
+                    if claim.get("typ") == "name":  
+                        user_name = claim.get("val")  
+            if user_id:  
+                session["user_id"] = user_id  
+            if user_name:  
+                session["user_name"] = user_name  
+            return user_id  
+        except Exception as e:  
+            print("Easy Auth ユーザー情報の取得エラー:", e)  
+    session["user_id"] = "anonymous"  
+    session["user_name"] = "anonymous"  
     return session["user_id"]  
   
 def get_search_client(index_name):  
@@ -210,8 +234,8 @@ def send_message():
             'new_small_files': prepare_files(results_vs['new_small']),  
             'large_files': prepare_files(results_vs['large'])  
         }  
-        if "user_id" not in session:  
-            session["user_id"] = "anonymous"  
+        # (ユーザーID取得は後続APIで利用するためメモ)  
+        _ = get_authenticated_user()  
         return json.dumps(resp, ensure_ascii=False), 200, {'Content-Type': 'application/json'}  
     except Exception as e:  
         print("ベクトル検索アシスタントエラー:", e)  
@@ -248,7 +272,7 @@ def save_rating():
         data = request.get_json()  
         user_id = get_authenticated_user()  
         user_prompt = data.get("user_prompt", "")  
-        ratings = data.get("ratings", {})         # dict: column名→score  
+        ratings = data.get("ratings", {})       # dict: column名→score  
         assistant_answers = data.get("assistant_answers", {}) # dict: column名→content  
   
         # 入力チェック  
